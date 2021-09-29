@@ -1,5 +1,4 @@
-# Yu Zhang
-# Monday Lab2
+#wed lab
 from pygame.locals import *
 import RPi.GPIO as GPIO
 import pygame
@@ -27,18 +26,18 @@ screen.fill(BLACK)
 button_font = pygame.font.Font(None, 30)
 buttons_dic = {"Quit":(270, 220), "Start": (50,220)}
 touch_info_font = pygame.font.Font(None, 30)
-# Store pressed positions 
+# Store pressed positions
 pressed_positions_list = []
 # Ball Configuration
-# Big Ball 
-speed_big = [1,1] 
+# Big Ball
+speed_big = [1,1]
 ball_big = pygame.image.load("magic_ball.png")
 ballrect_big = ball_big.get_rect()
 ballrect_big.center = (198,100)
 ball_big_radius = 64
 
 # Small Ball
-speed_small = [-2,-2] 
+speed_small = [-2,-2]
 ball_small = pygame.image.load("soccer-ball.png")
 ballrect_small = ball_small.get_rect()
 ballrect_small.center = (100,100)
@@ -46,9 +45,9 @@ ball_small_radius = 24
 
 # GPIO Setting
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(17,GPIO.IN,pull_up_down = GPIO.PUD_UP)    
+GPIO.setup(17,GPIO.IN,pull_up_down = GPIO.PUD_UP)
 def GPIO17_callback(channel):
-    global CODERUN  
+    global CODERUN
     print("Quit by Bail-out button!!!")
     CODERUN = False
 GPIO.add_event_detect(17, GPIO.FALLING, callback=GPIO17_callback, bouncetime=300)
@@ -80,16 +79,16 @@ def check_colliderect():
 def check_run_game():
     if (START_GAME):
         global ballrect_big, ballrect_small
-        ballrect_big = ballrect_big.move(speed_big)    
-        if ballrect_big.left < 0 or ballrect_big.right > width:        
-            speed_big[0] = -speed_big[0]    
-        if ballrect_big.top < 0 or ballrect_big.bottom > 200:        
+        ballrect_big = ballrect_big.move(speed_big)
+        if ballrect_big.left < 0 or ballrect_big.right > width:
+            speed_big[0] = -speed_big[0]
+        if ballrect_big.top < 0 or ballrect_big.bottom > 200:
             speed_big[1] = -speed_big[1]
 
-        ballrect_small= ballrect_small.move(speed_small)    
-        if ballrect_small.left < 0 or ballrect_small.right > width:        
-            speed_small[0] = -speed_small[0]    
-        if ballrect_small.top < 0 or ballrect_small.bottom > 200:        
+        ballrect_small= ballrect_small.move(speed_small)
+        if ballrect_small.left < 0 or ballrect_small.right > width:
+            speed_small[0] = -speed_small[0]
+        if ballrect_small.top < 0 or ballrect_small.bottom > 200:
             speed_small[1] = -speed_small[1]
 
         if check_colliderect():
@@ -143,16 +142,16 @@ if __name__ == "__main__":
     touch_info_rect = touch_info_text_surface.get_rect(center=(160,220))
     # Draw Ball
     screen.blit(ball_big, ballrect_big)
-    screen.blit(ball_small, ballrect_small) 
+    screen.blit(ball_small, ballrect_small)
     screen.blit(touch_info_text_surface, touch_info_rect)
     pygame.display.flip()
-   
+
     start_time = time.time()
-    while (time.time() - start_time <= 360) and CODERUN:  
+    while (time.time() - start_time <= 360) and CODERUN:
         clock.tick(FPS)
         touch_position = None
-    	for event in pygame.event.get(): 
-            if(event.type is MOUSEBUTTONDOWN): 
+    	for event in pygame.event.get():
+            if(event.type is MOUSEBUTTONDOWN):
                 # touch_position = pygame.mouse.get_pos()
                 # print(touch_position)
                 pass
