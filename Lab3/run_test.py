@@ -41,30 +41,27 @@ global_counter = 0
 # global flags to control left wheel
 left_motion_control_flag = False
 left_direction_control_flag = True
-# Log data structer for the left wheel
+# Log data dic for the left wheel
 left_log_dict = {(10, 100): ["Stop", "0"], (10, 120): ["Stop", "0"], (10, 140): ["Stop", "0"]}
 left_log_position_hash_dict = {1:(10, 100), 2: (10, 120), 3: (10, 140) }
 # global flags to control right wheel
 right_motion_control_flag = False
 right_direction_control_flag = True
-# Log data structer for the right wheel
+# Log data dic for the right wheel
 right_log_dict = {(220, 100): ["Stop", "0"], (220, 120): ["Stop", "0"], (220, 140): ["Stop", "0"]}
 right_log_position_hash_dict = {1:(220, 100), 2: (220, 120), 3: (220, 140)}
 
 def upload_log(side, event_type, elapse_time):
     if side == 'left':
-        # print("Update the left_log")
         log_dict = left_log_dict
         has_dict = left_log_position_hash_dict
     else:
-        # print("Update the right_log")
         log_dict = right_log_dict
         has_dict = right_log_position_hash_dict
     log_dict[has_dict[3]] = log_dict[has_dict[2]]
     log_dict[has_dict[2]] = log_dict[has_dict[1]]
     log_dict[has_dict[1]] = [event_type, str(int(elapse_time))]
-    # print(log_dict)
-    # print('\n')
+
 
 def left_wheel_start():
     global left_duty_cycle, left_motion_control_flag, start_time
@@ -217,13 +214,11 @@ def draw_log_content(side='left'):
         log_dict = left_log_dict
     else:
         log_dict = right_log_dict
-    # Data Example: (10, 100): ["Stop", "0"]
+
     for position,  content in log_dict.items():
-        # draw the command
         text_surface = history_content_font.render(content[0], True, WHITE)
         rect = text_surface.get_rect(midleft=position)
         screen.blit(text_surface, rect)
-        # draw the number
         text_surface = history_content_font.render(content[1], True, WHITE)
         rect = text_surface.get_rect(midleft=( position[0] + 80, position[1]))
         screen.blit(text_surface, rect)
@@ -330,6 +325,7 @@ def pivot_left():
     left_wheel_counterclockwise()
     right_wheel_clockwise()
 
+# game event devide by seconds 
 def run_game_event():
     global global_counter
     if global_counter >=0 and global_counter <= 100:

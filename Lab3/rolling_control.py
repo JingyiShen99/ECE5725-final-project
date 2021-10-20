@@ -86,7 +86,6 @@ def left_wheel_stop():
     left_motion_control_flag = False
     left_direction_control_flag = True # set the defult direction back to clockwise
     elapse_time = time.time() - start_time
-    # print("111111111")
     upload_log(side="left", event_type="Stop", elapse_time=elapse_time)
 
 def left_wheel_counterclockwise():
@@ -241,7 +240,7 @@ def draw_buttons():
     # draw the center button
     for text, position in stop_button.items():
         if PANIC_STOP:
-            text = "RESMU"
+            text = "RESMUE"
         text_surface = center_button_font.render(text, True, BLACK)
         rect = text_surface.get_rect(center=position)
         screen.blit(text_surface, rect)
@@ -347,13 +346,10 @@ def check_center_button(touch_position):
             righ_wheel_stop()
         else:
             print("The RESUME button is pressed! RESUME!!!\n")
-            # rusmue
+            # resume
             resume_left()
             resume_right()
-            
 
-# def refresh_game():
-#     init_game()
 
 if __name__ == "__main__":
     # add detect event
