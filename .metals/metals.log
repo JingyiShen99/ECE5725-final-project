@@ -2,3 +2,4 @@
 [0m2021.12.01 11:59:59 INFO  time: initialize in 1.01s[0m
 [0m2021.12.01 12:00:03 WARN  Build server is not auto-connectable.[0m
 [0m2021.12.01 12:00:03 WARN  no build tool detected in workspace 'G:\research\ECE-5725-group8'. The most common cause for this problem is that the editor was opened in the wrong working directory, for example if you use sbt then the workspace directory should contain build.sbt. [0m
+[0m2021.12.01 23:14:12 INFO  shutting down Metals[0m
