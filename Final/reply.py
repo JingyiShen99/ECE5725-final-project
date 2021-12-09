@@ -1,6 +1,8 @@
 import telebot
 import RPi.GPIO as GPIO
 import time 
+from PIL import Image
+
 
 bot = telebot.TeleBot("2022892271:AAFua__pKYcbUQIhlOuwMKUZs-bWewbwDrY", parse_mode=None) # You can set parse_mode by default. HTML or MARKDOWN
 
@@ -15,7 +17,8 @@ led_pin = GPIO.PWM(26, 1)
 led_pin.start(50)
 
 #TODO: setup pass code
-
+def get_date_taken(path):
+    return Image.open(path)._getexif()[36867]
 
 #---------------------------gpio init operation
 GPIO.setup(26, GPIO.OUT)
@@ -53,6 +56,11 @@ def get_delivery_status(message):
 bot.infinity_polling()
 
 #-----load delivery handlers--------------------------------
+#/home/pi/Downloads/3.jpeg: Predicted in 0.970428 seconds.
+# 2
+# Box 0, 0.686100, 0.433947, 0.482435 ,0.397016
+# Box 1, 0.705939, 0.436732, 0.403356 ,0.375360
+# ups: 89%
 def log_request(message):
 	f = open("file.txt", "r")
 	searchlines = f.readlines()
@@ -76,4 +84,6 @@ def check_bounding_boxes(box_list):
 def emergency_alarm():
 	#TODO: triggered
 	pass
+
+def retrieve_images(time_list):
 
