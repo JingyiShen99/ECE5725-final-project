@@ -4,6 +4,8 @@ import time
 
 bot = telebot.TeleBot("2022892271:AAFua__pKYcbUQIhlOuwMKUZs-bWewbwDrY", parse_mode=None) # You can set parse_mode by default. HTML or MARKDOWN
 
+result_list = [][4]
+carrier_list = ["Fedex", "DHL", "Food"]
 
 #----------------------------gpio part
 GPIO.setup(26, GPIO.OUT)
@@ -11,6 +13,8 @@ GPIO.setup(5, GPIO.OUT)
 GPIO.setup(6, GPIO.OUT)
 led_pin = GPIO.PWM(26, 1)
 led_pin.start(50)
+
+#TODO: setup pass code
 
 
 #---------------------------gpio init operation
@@ -41,4 +45,35 @@ def send_welcome(message):
 def echo_all(message):
 	bot.reply_to(message, message.text)
 
+@bot.message_handler(commands=['delivery'])
+def get_delivery_status(message):
+	log_request(message)
+
+
 bot.infinity_polling()
+
+#-----load delivery handlers--------------------------------
+def log_request(message):
+	f = open("file.txt", "r")
+	searchlines = f.readlines()
+	f.close() 
+	for i, line in enumerate(searchlines):
+		if "searchphrase" in line: 
+			for l in searchlines[i:i+3]:
+				result_list[l][0] = searchlines[i]
+				if searchlines[i + 1] is carrier_list[0]:
+					result_list[l][1] = 1
+				elif searchlines[i + 1] is carrier_list[1]:
+					result_list[l][2] =	1
+				elif searchlines[i + 1] is carrier_list[2]:
+					#TODO: check bounding boxes
+					pass
+
+def check_bounding_boxes(box_list):
+	#TODO: check bounding boxes functions
+	pass
+
+def emergency_alarm():
+	#TODO: triggered
+	pass
+
