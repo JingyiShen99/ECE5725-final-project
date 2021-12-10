@@ -11,8 +11,7 @@ from picamera import PiCamera
 
 bot = telebot.TeleBot("2022892271:AAFua__pKYcbUQIhlOuwMKUZs-bWewbwDrY", parse_mode=None) # You can set parse_mode by default. HTML or MARKDOWN
 
-result_list = [][4]
-local_result_list = []
+result_list = defaultdict(list)
 carrier_list = ["Fedex", "DHL", "Food"]
 list_pointer = 0
 
@@ -25,15 +24,16 @@ label_stamp = 100
 #-----paths--------------------------------
 result_storage_path = "/home/pi/PiImage/"
 image_name = str(label_stamp) + ".jpg"
-output_path = "/home/pi/PiImage/OutTxt/" + str(label_stamp) + ".txt"
+output_path = "/home/pi/PiImage/OutTxt/"
+output_directory = "/home/pi/PiImage/OutTxt/"
 
 #----------------------------gpio part
 #----------------------------led
-GPIO.setup(26, GPIO.OUT)
-GPIO.setup(5, GPIO.OUT)
-GPIO.setup(6, GPIO.OUT)
-led_pin = GPIO.PWM(26, 1)
-led_pin.start(50)
+# GPIO.setup(26, GPIO.OUT)
+# GPIO.setup(5, GPIO.OUT)
+# GPIO.setup(6, GPIO.OUT)
+# led_pin = GPIO.PWM(26, 1)
+# led_pin.start(50)
 #----------------------------movement sensor
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(4, GPIO.IN)
@@ -52,39 +52,6 @@ led_pin = GPIO.PWM(26, 1)
 led_pin.start(50)
 
 
-@bot.message_handler(commands=['start', 'help'])
-def send_welcome(message):
-	bot.reply_to(message, "Welcome to the ultimate control panel.")
-
-@bot.message_handler(commands=['苟利国家生死以', '膜蛤'])
-def send_welcome(message):
-	bot.reply_to(message, "岂因祸福避趋之")
-
-
-@bot.message_handler(commands=['alarm'])
-def send_welcome(message):
-        bot.reply_to(message, "alarm will be triggered")
-        threading.Thread(target = emergency_alarm).start
-        while(play_flag):
-            usr_in = 1
-            usr_in = 100
-            led_pin.ChangeFrequency(int(usr_in))
-            time.sleep(0.5)
-
-@bot.message_handler(func=lambda message: True)
-def echo_all(message):
-	bot.reply_to(message, message.text)
-
-@bot.message_handler(commands=['latest delivery'])
-def get_delivery_status(message):
-	log_request(message, 0)
-
-@bot.message_handler(commands=['history'])
-def get_history(message):
-	log_request(message, 1)
-
-
-threading.Thread(target = bot.infinity_polling()).start()
 
 
 #-----load delivery handlers--------------------------------
@@ -119,12 +86,15 @@ def log_request(path, complete_flag):
                         result_list[image_path].append("food")
                     list_pointer += 1
                 else:
-
-                    print(box)
+                    pass
                 j += 1
         list_pointer += 1
         print(image_path)
-        print(result_list)
+    print(result_list)
+    if complete_flag:
+        return result_list
+    else:
+        return local_result_list
             
     f.close()
 	
@@ -157,11 +127,75 @@ def retrieve_images(time_list):
 	#TODO: send back lastest image
 	pass
 
-def detection(result_storage_path, image_name, output_path):
+def detection():
+    global label_stamp
+    global output_path
+    global image_name
     #TODO: trigger sensor and detections
     while True:
-        if GPIO.input(19):
-            camera.capture(result_storage_path + image_name + '.jpg')
-            time.sleep(1)
-            os.system('cd /darknet-nnpack/ && ./darknet detector test weight/t.data cfg/yolov3tiny_custom_trained.cfg weight/t.weights {0}{1} > {2}'.format(result_storage_path, image_name, output_path))
+        if GPIO.input(4):
+            image_name = str(label_stamp) + ".jpg"
+            camera.capture(result_storage_path + image_name)
+            output_path_full = output_path + str(label_stamp) + ".txt"
+            os.system('cd /home/pi/darknet-nnpack/ && ./darknet detector test weight/t.data cfg/yolov3tiny_custom_trained.cfg weight/t.weights {0}{1} > {2}'.format(result_storage_path, image_name, output_path_full))
+            label_stamp += 1
             time.sleep(5)
+
+
+
+@bot.message_handler(commands=['start', 'help'])
+def send_welcome(message):
+	bot.reply_to(message, "Welcome to the ultimate control panel.")
+
+@bot.message_handler(commands=['苟利国家生死以', '膜蛤'])
+def send_welcome(message):
+	bot.reply_to(message, "岂因祸福避趋之")
+
+
+@bot.message_handler(commands=['alarm'])
+def send_welcome(message):
+        bot.reply_to(message, "alarm will be triggered")
+        threading.Thread(target = emergency_alarm).start
+        while(play_flag):
+            usr_in = 1
+            usr_in = 100
+            led_pin.ChangeFrequency(int(usr_in))
+            time.sleep(0.5)
+
+
+@bot.message_handler(commands=['latest'])
+def get_delivery_status(message):
+        result_list_reply = log_request(output_directory, 0)
+        bot.reply_to(message, result_list_reply)
+
+@bot.message_handler(commands=['history'])
+def get_history(message):
+        result_list_reply = (log_request(output_directory, 1))
+        reply_list = ''.join(str(e) for e in str(list(result_list_reply.values())))
+        print(result_list)
+        bot.reply_to(message, reply_list)
+
+@bot.message_handler(func=lambda message: True)
+def echo_all(message):
+    bot.reply_to(message, message.text)
+
+class DetectionThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+
+    def run(self):
+        while True:
+            detection()
+
+class ReplyThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+
+    def run(self):
+        bot.infinity_polling()
+
+thread1 = DetectionThread()
+thread2 = ReplyThread()
+
+thread1.start()
+thread2.start()
