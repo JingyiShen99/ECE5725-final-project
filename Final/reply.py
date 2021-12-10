@@ -6,6 +6,8 @@ import os
 from collections import defaultdict
 from pygame import mixer
 import threading
+from picamera import PiCamera
+
 
 bot = telebot.TeleBot("2022892271:AAFua__pKYcbUQIhlOuwMKUZs-bWewbwDrY", parse_mode=None) # You can set parse_mode by default. HTML or MARKDOWN
 
@@ -17,17 +19,28 @@ list_pointer = 0
 mixer.init()
 play_flag = False
 
+#-----------------------------lablel init
+label_stamp = 100
+
 #-----paths--------------------------------
-result_storage_path = ""
-image_name = label_stamp + ".jpg"
-output_path = "" +label_stamp
+result_storage_path = "/home/pi/PiImage/"
+image_name = str(label_stamp) + ".jpg"
+output_path = "/home/pi/PiImage/OutTxt/" + str(label_stamp) + ".txt"
 
 #----------------------------gpio part
+#----------------------------led
 GPIO.setup(26, GPIO.OUT)
 GPIO.setup(5, GPIO.OUT)
 GPIO.setup(6, GPIO.OUT)
 led_pin = GPIO.PWM(26, 1)
 led_pin.start(50)
+#----------------------------movement sensor
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(4, GPIO.IN)
+
+#----------------------------camera init
+camera = PiCamera()
+camera.resolution = (3280, 2464)
 
 #TODO: setup pass code
 def get_date_taken(path):
@@ -146,5 +159,9 @@ def retrieve_images(time_list):
 
 def detection(result_storage_path, image_name, output_path):
     #TODO: trigger sensor and detections
-    os.system('cd /darknet-nnpack/ && ./darknet detector test cfg/yolov3-tiny.cfg yolov3-tiny.weights {0}/{1} > {2}'.format(result_storage_path, image_name, output_path)) 
-
+    while True:
+        if GPIO.input(19):
+            camera.capture(result_storage_path + image_name + '.jpg')
+            time.sleep(1)
+            os.system('cd /darknet-nnpack/ && ./darknet detector test weight/t.data cfg/yolov3tiny_custom_trained.cfg weight/t.weights {0}{1} > {2}'.format(result_storage_path, image_name, output_path))
+            time.sleep(5)
