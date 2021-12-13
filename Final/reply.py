@@ -42,6 +42,10 @@ GPIO.setup(4, GPIO.IN)
 camera = PiCamera()
 camera.resolution = (3280, 2464)
 
+#---------------------------pygame initialization
+mixer.init()
+mixer.music.load("myFile.wav")
+
 #TODO: setup pass code
 def get_date_taken(path):
     return Image.open(path)._getexif()[36867]
@@ -51,7 +55,22 @@ GPIO.setup(26, GPIO.OUT)
 led_pin = GPIO.PWM(26, 1)
 led_pin.start(50)
 
+#---------------------------hall effect sensor initialization
+def sensorCallback(sensor_channel):
+  # Called if sensor output changes
+  timestamp = time.time()
+  if GPIO.input(sensor_channel):
+    # No magnet
+    print("Sensor HIGH ")
+    return False
+  else:
+    # Magnet
+    print("Sensor LOW ")
+    return True
 
+#------------------------pin pad setup
+def pin_pad_input():
+    pass
 
 
 #-----load delivery handlers--------------------------------
@@ -65,7 +84,9 @@ def log_request(path, complete_flag):
             i = 0
             j = 0
             local_result_list = []
-            searchlines = f.readlines()
+            if os.stat(f).st_size == 0:
+                break
+            searchlines = f.readlines()   
             last_line = searchlines[-1]
             image_path = searchlines[0].split(':')[0]
             print(image_path)
@@ -116,12 +137,11 @@ def emergency_alarm():
 	prev_state = True
 	global play_flag
 	# Load the sounds
-	sound = mixer.Sound('applause-1.wav')
 
 	# If button is pushed, light up LED
 	while play_flag:
 		if (current_state == False) and (prev_state == True):
-			sound.play()
+			mixer.music.play()
 		time.sleep(10)
 		play_flag = False
 
@@ -176,6 +196,15 @@ def get_history(message):
         reply_list = ''.join(str(e) for e in str(list(result_list_reply.values())))
         print(result_list)
         bot.reply_to(message, reply_list)
+
+@bot.message_handler(commands=['door'])
+def get_door(message):
+        door_staus = sensorCallback(sensor_channel)
+        if door_staus:
+            bot.reply_to(message, 'The  door is closed!!!')
+        else:
+            bot.reply_to(message, 'The door is open!!!')
+            
 
 @bot.message_handler(func=lambda message: True)
 def echo_all(message):
