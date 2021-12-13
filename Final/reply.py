@@ -7,6 +7,7 @@ from collections import defaultdict
 from pygame import mixer
 import threading
 from picamera import PiCamera
+from pad4pi import rpi_gpio
 
 
 bot = telebot.TeleBot("2022892271:AAFua__pKYcbUQIhlOuwMKUZs-bWewbwDrY", parse_mode=None) # You can set parse_mode by default. HTML or MARKDOWN
@@ -16,7 +17,7 @@ carrier_list = ["Fedex", "DHL", "Food"]
 list_pointer = 0
 
 mixer.init()
-play_flag = False
+play_flag = True
 
 #-----------------------------lablel init
 label_stamp = 100
@@ -28,15 +29,14 @@ output_path = "/home/pi/PiImage/OutTxt/"
 output_directory = "/home/pi/PiImage/OutTxt/"
 
 #----------------------------gpio part
-#----------------------------led
-# GPIO.setup(26, GPIO.OUT)
-# GPIO.setup(5, GPIO.OUT)
-# GPIO.setup(6, GPIO.OUT)
-# led_pin = GPIO.PWM(26, 1)
-# led_pin.start(50)
+
 #----------------------------movement sensor
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(4, GPIO.IN)
+
+#----------------------------hall
+GPIO.setwarnings(False)
+GPIO.setup( 20, GPIO.IN)
 
 #----------------------------camera init
 camera = PiCamera()
@@ -44,7 +44,7 @@ camera.resolution = (3280, 2464)
 
 #---------------------------pygame initialization
 mixer.init()
-mixer.music.load("myFile.wav")
+mixer.music.load("/home/pi/good_alarm.mp3")
 
 #TODO: setup pass code
 def get_date_taken(path):
@@ -55,20 +55,59 @@ GPIO.setup(26, GPIO.OUT)
 led_pin = GPIO.PWM(26, 1)
 led_pin.start(50)
 
-#---------------------------hall effect sensor initialization
-def sensorCallback(sensor_channel):
-  # Called if sensor output changes
-  timestamp = time.time()
-  if GPIO.input(sensor_channel):
-    # No magnet
-    print("Sensor HIGH ")
-    return False
-  else:
-    # Magnet
-    print("Sensor LOW ")
-    return True
 
 #------------------------pin pad setup
+# Setup Keypad
+KEYPAD =[["1","2","3","A"],
+        ["4","5","6","B"],
+        ["7","8","9","C"],
+        ["0","F","E","D"]]
+password = "5725"
+res = 1
+# same as calling: factory.create_4_by_4_keypad, still we put here fyi:
+ROW_PINS = [22,27,17,21] # BCM numbering; Board numbering is: 7,8,10,11 (see pinout.xyz/)
+COL_PINS = [26,19,6,5] # BCM numbering; Board numbering is: 12,13,15,16 (see pinout.xyz/)
+
+factory = rpi_gpio.KeypadFactory()
+
+# Try keypad = factory.create_4_by_3_keypad() or 
+# Try keypad = factory.create_4_by_4_keypad() #for reasonable defaults
+# or define your own:
+keypad = factory.create_keypad(keypad=KEYPAD, row_pins=ROW_PINS, col_pins=COL_PINS)
+
+class KeyStore:
+    def __init__(self, message):
+        #list to store them
+        self.pressed_keys =''
+        self.message = message
+
+    #function to clear string
+    def clear_keys(self):
+        self.pressed_keys = self.pressed_keys.replace(self.pressed_keys,'')
+
+    def store_key(self,key):
+        global res
+        global password
+        if key=='D':
+            #printing the sequence of keys.
+            if self.pressed_keys == password:
+              print("right password, the door is opened, please enter!")
+              bot.reply_to(self.message, "The mechanics have entered")
+              return 100
+            else:
+              if res>=3:
+                bot.reply_to(self.message, "Potential risk of unknown personel trying to enter")
+                print("wrong password for 3 times, please contact the administrator")
+                password = "sdsg"
+                return 101
+              else:
+                print("wrong password, please try again! (it is the "+ str(res)+" try)")
+              res += 1
+            self.clear_keys()
+        else:
+            self.pressed_keys += key
+
+
 def pin_pad_input():
     pass
 
@@ -76,17 +115,18 @@ def pin_pad_input():
 #-----load delivery handlers--------------------------------
 def log_request(path, complete_flag):
     global list_pointer
-
-
+    result_list.clear()
     box = []
     for filename in os.listdir(path):
         with open(os.path.join(path, filename), 'r') as f:  # open in readonly mode
             i = 0
             j = 0
             local_result_list = []
-            if os.stat(f).st_size == 0:
-                break
-            searchlines = f.readlines()   
+            # if os.path.join(path, filename).getsize == 0:
+            #     break
+            searchlines = f.readlines()
+            if len(searchlines) is 0:
+                continue 
             last_line = searchlines[-1]
             image_path = searchlines[0].split(':')[0]
             print(image_path)
@@ -109,8 +149,7 @@ def log_request(path, complete_flag):
                             result_list[image_path].append("food")
                         list_pointer += 1
                     else:
-
-                        print(box)
+                        return local_result_list
                     if searchlines[2 + i + 1 + j] is last_line:
                         break
                     j += 1
@@ -118,7 +157,8 @@ def log_request(path, complete_flag):
         list_pointer += 1
         print(result_list)
 
-            
+    if complete_flag:
+        return result_list
     f.close()
 	
 # /home/pi/Downloads/3.jpeg: Predicted in 0.970428 seconds.
@@ -133,17 +173,27 @@ def check_bounding_boxes(box_list):
 
 def emergency_alarm():
 	# Remember the current and previous button states
-	current_state = True
+	current_state = False
 	prev_state = True
 	global play_flag
 	# Load the sounds
 
 	# If button is pushed, light up LED
 	while play_flag:
-		if (current_state == False) and (prev_state == True):
-			mixer.music.play()
-		time.sleep(10)
-		play_flag = False
+            if (current_state == False) and (prev_state == True):
+                mixer.music.play()
+                current_state = True
+
+
+		# time.sleep(10)
+		# play_flag = False
+
+def open_door(message):
+    #key oeprations
+    keys = KeyStore(message)
+
+    # store_key will be called each time a keypad button is pressed
+    status_code = keypad.registerKeyPressHandler(keys.store_key)
 
 def retrieve_images(time_list):
 	#TODO: send back lastest image
@@ -173,26 +223,34 @@ def send_welcome(message):
 def send_welcome(message):
 	bot.reply_to(message, "岂因祸福避趋之")
 
-
 @bot.message_handler(commands=['alarm'])
 def send_welcome(message):
-        bot.reply_to(message, "alarm will be triggered")
-        threading.Thread(target = emergency_alarm).start
-        while(play_flag):
-            usr_in = 1
-            usr_in = 100
-            led_pin.ChangeFrequency(int(usr_in))
-            time.sleep(0.5)
+        bot.reply_to(message, "door open process will be triggered")
+        status_code = open_door(message)
+
+        # while(play_flag):
+        #     usr_in = 1
+        #     usr_in = 100
+        #     led_pin.ChangeFrequency(int(usr_in))
+        #     time.sleep(0.5)
 
 
 @bot.message_handler(commands=['latest'])
 def get_delivery_status(message):
         result_list_reply = log_request(output_directory, 0)
+        if result_list_reply is None:
+            bot.reply_to(message, "There are no logs currently")
+            return 0
         bot.reply_to(message, result_list_reply)
 
 @bot.message_handler(commands=['history'])
 def get_history(message):
+        empty_message = 0
         result_list_reply = (log_request(output_directory, 1))
+        if result_list_reply is None:
+            empty_message = 1
+            bot.reply_to(message, "There are no logs currently")
+            return 0
         reply_list = ''.join(str(e) for e in str(list(result_list_reply.values())))
         print(result_list)
         bot.reply_to(message, reply_list)
@@ -204,6 +262,13 @@ def get_door(message):
             bot.reply_to(message, 'The  door is closed!!!')
         else:
             bot.reply_to(message, 'The door is open!!!')
+
+@bot.message_handler(commands=['food'])
+def get_food(message):
+        if(GPIO.input(20) == False):
+            bot.reply_to(message, "There are food delivery on shelf")
+        else:
+            bot.reply_to(message, "Food Lot is Empty")
             
 
 @bot.message_handler(func=lambda message: True)
